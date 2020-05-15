@@ -2,10 +2,32 @@
 using System.Collections; 
 using System.Collections.Generic; 
 using System.Net; 
-using System.Net.Sockets; 
+using System.Net.Sockets;
+using System.Net.NetworkInformation;
 using System.Text; 
 using System.Threading; 
 using UnityEngine;  
+using System.Globalization;
+using System.Text.RegularExpressions;
+
+[System.Serializable]
+public class TCPmsg
+{
+    //public string tx;
+    //public string ty;
+    //public string tz;
+
+    public string rx;
+    public string ry;
+    public string rz;
+    public string rw;
+}
+
+public class TCPtrans {
+    public Vector3 t;
+    public Quaternion r;
+}
+
 
 public class TCP_Server : MonoBehaviour {  	
 	#region private members 
@@ -13,21 +35,34 @@ public class TCP_Server : MonoBehaviour {
 	private Thread tcpListenerThread;
 	private TcpClient connectedTcpClient; 	
 	#endregion
+	public string msg;
+	private TCPtrans trans;
+
     public string ip;
+	public GameObject camera;
+	
+	public float translationDeadzone;
+	public float translationScale;
+
+	public float rotationDeadzone;
 		
 	// Use this for initialization
 	void Start () { 		
 		// Start TcpServer background thread 		
 		tcpListenerThread = new Thread (new ThreadStart(ListenForIncommingRequests)); 		
 		tcpListenerThread.IsBackground = true; 		
-		tcpListenerThread.Start(); 	
+		tcpListenerThread.Start();
+		//ip = LocalIPAddress();
 	}  	
 	
 	// Update is called once per frame
-	void Update () { 		
-		if (Input.GetKeyDown(KeyCode.Space)) {             
-			SendMessage();         
-		} 	
+	void Update () {
+		//transform.position += Vector3.up * 10.0f;	
+		if (msg != null && SimulateCamera(msg) != null) {
+			trans = SimulateCamera(msg);
+			transform.position += trans.t * translationScale;
+			transform.rotation = trans.r;
+		}
 	}  	
 	
 	/// <summary> 	
@@ -46,12 +81,15 @@ public class TCP_Server : MonoBehaviour {
 					using (NetworkStream stream = connectedTcpClient.GetStream()) { 						
 						int length; 						
 						// Read incomming stream into byte arrary. 						
-						while ((length = stream.Read(bytes, 0, bytes.Length)) != 0) { 							
+						while ((length = stream.Read(bytes, 0, bytes.Length)) != 0) {
+							msg = "";							
 							var incommingData = new byte[length]; 							
 							Array.Copy(bytes, 0, incommingData, 0, length);  							
 							// Convert byte array to string message. 							
 							string clientMessage = Encoding.ASCII.GetString(incommingData); 							
-							Debug.Log("client message received as: " + clientMessage); 						
+							Debug.Log("client message received as: " + clientMessage);
+							msg = clientMessage;
+							
 						} 					
 					} 				
 				} 			
@@ -84,5 +122,48 @@ public class TCP_Server : MonoBehaviour {
 		catch (SocketException socketException) {             
 			Debug.Log("Socket exception: " + socketException);         
 		} 	
-	} 
+	}
+
+	public static string LocalIPAddress() {
+		IPHostEntry host;
+		string localIP = "0.0.0.0";
+		host = Dns.GetHostEntry(Dns.GetHostName());
+		foreach (IPAddress ip in host.AddressList)
+		{
+			if (ip.AddressFamily == AddressFamily.InterNetwork)
+			{
+				localIP = ip.ToString();
+				break;
+			}
+		}
+		return localIP;
+	}
+
+	public TCPtrans SimulateCamera(string json) {
+
+		var regex = new Regex(@"\{(.*?)\}");
+
+		TCPmsg msg = new TCPmsg();
+		TCPtrans rMsg = new TCPtrans();
+
+		try {
+			Match  m = regex.Match(json);
+			msg = JsonUtility.FromJson<TCPmsg>(m.Value);
+			rMsg.t = new Vector3(
+				0f, //float.Parse(msg.tx, CultureInfo.InvariantCulture.NumberFormat),
+				0f, //float.Parse(msg.ty, CultureInfo.InvariantCulture.NumberFormat),
+				0f // float.Parse(msg.tz, CultureInfo.InvariantCulture.NumberFormat)
+			);
+			rMsg.r = new Quaternion(
+				float.Parse(msg.rx, CultureInfo.InvariantCulture.NumberFormat),
+				float.Parse(msg.ry, CultureInfo.InvariantCulture.NumberFormat),
+				float.Parse(msg.rz, CultureInfo.InvariantCulture.NumberFormat),
+				float.Parse(msg.rw, CultureInfo.InvariantCulture.NumberFormat)
+			);
+		} catch {
+			Debug.Log(json);
+		}
+
+		return rMsg;
+	}
 }
