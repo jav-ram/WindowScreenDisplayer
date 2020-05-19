@@ -36,6 +36,7 @@ public class TCP_Server : MonoBehaviour {
 	private TcpClient connectedTcpClient; 	
 	#endregion
 	public string msg;
+	public string buffer;
 	private TCPtrans trans;
 
     public string ip;
@@ -58,8 +59,8 @@ public class TCP_Server : MonoBehaviour {
 	// Update is called once per frame
 	void Update () {
 		//transform.position += Vector3.up * 10.0f;	
-		if (msg != null && SimulateCamera(msg) != null) {
-			trans = SimulateCamera(msg);
+		trans = SimulateCamera(msg);
+		if (msg != null && msg != "" && trans != null) {
 			transform.position += trans.t * translationScale;
 			transform.rotation = trans.r;
 		}
@@ -87,9 +88,13 @@ public class TCP_Server : MonoBehaviour {
 							Array.Copy(bytes, 0, incommingData, 0, length);  							
 							// Convert byte array to string message. 							
 							string clientMessage = Encoding.ASCII.GetString(incommingData); 							
-							Debug.Log("client message received as: " + clientMessage);
-							msg = clientMessage;
-							
+							if (!clientMessage.Contains("}")) {
+								buffer += clientMessage;
+							} else {
+								string[] sep = clientMessage.Split('}');
+								msg = buffer + sep[0] + "}";
+								buffer = sep[1];
+							}
 						} 					
 					} 				
 				} 			
@@ -160,10 +165,11 @@ public class TCP_Server : MonoBehaviour {
 				float.Parse(msg.rz, CultureInfo.InvariantCulture.NumberFormat),
 				float.Parse(msg.rw, CultureInfo.InvariantCulture.NumberFormat)
 			);
+			return rMsg;
 		} catch {
 			Debug.Log(json);
+			return null;
 		}
 
-		return rMsg;
 	}
 }
