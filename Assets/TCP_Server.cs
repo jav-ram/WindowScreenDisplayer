@@ -13,19 +13,22 @@ using System.Text.RegularExpressions;
 [System.Serializable]
 public class TCPmsg
 {
-    //public string tx;
-    //public string ty;
-    //public string tz;
+    public string tx;
+    public string ty;
+    public string tz;
 
     public string rx;
     public string ry;
     public string rz;
     public string rw;
+
+	public string reset;
 }
 
 public class TCPtrans {
     public Vector3 t;
     public Quaternion r;
+	public bool reset;
 }
 
 
@@ -40,10 +43,10 @@ public class TCP_Server : MonoBehaviour {
 	private TCPtrans trans;
 
     public string ip;
-	public GameObject camera;
 	
 	public float translationDeadzone;
-	public float translationScale;
+	public Vector3 translationScale;
+	public Vector3 offset;
 
 	public float rotationDeadzone;
 		
@@ -60,9 +63,18 @@ public class TCP_Server : MonoBehaviour {
 	void Update () {
 		//transform.position += Vector3.up * 10.0f;	
 		trans = SimulateCamera(msg);
+		
 		if (msg != null && msg != "" && trans != null) {
-			transform.position += trans.t * translationScale;
-			transform.rotation = trans.r;
+			if (trans.reset == true) {
+				transform.position = Vector3.zero;
+			} else {
+				//Vector3 depth = transform.forward * trans.t.z;
+				//Vector3 horizontal = transform.right * trans.t.x;
+				//Vector3 vertical = transform.up * trans.t.y;
+				transform.position = Vector3.Scale(trans.t, translationScale);
+				transform.rotation = trans.r;
+				Debug.Log(transform.rotation.ToString());
+			}
 		}
 	}  	
 	
@@ -75,7 +87,7 @@ public class TCP_Server : MonoBehaviour {
 			tcpListener = new TcpListener(IPAddress.Parse(ip), 8052); 			
 			tcpListener.Start();              
 			Debug.Log("Server is listening");              
-			Byte[] bytes = new Byte[1024];  			
+			Byte[] bytes = new Byte[4096];  			
 			while (true) { 				
 				using (connectedTcpClient = tcpListener.AcceptTcpClient()) { 					
 					// Get a stream object for reading 					
@@ -83,18 +95,24 @@ public class TCP_Server : MonoBehaviour {
 						int length; 						
 						// Read incomming stream into byte arrary. 						
 						while ((length = stream.Read(bytes, 0, bytes.Length)) != 0) {
-							msg = "";							
-							var incommingData = new byte[length]; 							
-							Array.Copy(bytes, 0, incommingData, 0, length);  							
+							var incommingData = new byte[length];
+							Array.Copy(bytes, 0, incommingData, 0, length);
 							// Convert byte array to string message. 							
-							string clientMessage = Encoding.ASCII.GetString(incommingData); 							
-							if (!clientMessage.Contains("}")) {
-								buffer += clientMessage;
-							} else {
+							string clientMessage = Encoding.ASCII.GetString(incommingData);
+
+							msg = "";
+							
+							if (clientMessage.Contains("{")) {
+								string[] sep = clientMessage.Split('{');
+								buffer = "{" + sep[1];
+							}
+
+							if (clientMessage.Contains("}")) {
 								string[] sep = clientMessage.Split('}');
 								msg = buffer + sep[0] + "}";
 								buffer = sep[1];
 							}
+
 						} 					
 					} 				
 				} 			
@@ -152,12 +170,13 @@ public class TCP_Server : MonoBehaviour {
 		TCPtrans rMsg = new TCPtrans();
 
 		try {
-			Match  m = regex.Match(json);
+			Match m = regex.Match(json);
 			msg = JsonUtility.FromJson<TCPmsg>(m.Value);
+			
 			rMsg.t = new Vector3(
-				0f, //float.Parse(msg.tx, CultureInfo.InvariantCulture.NumberFormat),
-				0f, //float.Parse(msg.ty, CultureInfo.InvariantCulture.NumberFormat),
-				0f // float.Parse(msg.tz, CultureInfo.InvariantCulture.NumberFormat)
+				float.Parse(msg.tx, CultureInfo.InvariantCulture.NumberFormat),
+				float.Parse(msg.ty, CultureInfo.InvariantCulture.NumberFormat),
+				float.Parse(msg.tz, CultureInfo.InvariantCulture.NumberFormat)
 			);
 			rMsg.r = new Quaternion(
 				float.Parse(msg.rx, CultureInfo.InvariantCulture.NumberFormat),
@@ -165,9 +184,12 @@ public class TCP_Server : MonoBehaviour {
 				float.Parse(msg.rz, CultureInfo.InvariantCulture.NumberFormat),
 				float.Parse(msg.rw, CultureInfo.InvariantCulture.NumberFormat)
 			);
+			rMsg.reset = msg.reset == "true" ? true : false;
+			Debug.Log(rMsg.r);
+			//Debug.Log(rMsg);
 			return rMsg;
 		} catch {
-			Debug.Log(json);
+			Debug.Log("Error in parsing" + json);
 			return null;
 		}
 
