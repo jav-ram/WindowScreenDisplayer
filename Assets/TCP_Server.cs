@@ -80,6 +80,7 @@ public class TCP_Server : MonoBehaviour {
 			transform.position = trans.t;
 			//transform.rotation = Quaternion.Euler(trans.r);
 			transform.rotation = Quaternion.LookRotation(-(trans.t) - center.position, Vector3.up);
+			//center.rotation = Quaternion.Euler(trans.r*-1);
 		}
 
 		if (projection) {
@@ -229,7 +230,7 @@ public class TCP_Server : MonoBehaviour {
 				float.Parse(msg.ty, CultureInfo.InvariantCulture.NumberFormat),
 				float.Parse(msg.tz, CultureInfo.InvariantCulture.NumberFormat)
 			);
-			rMsg.t += new Vector3(0.07f, 0f, -1f);
+			rMsg.t += new Vector3(0f, 0f, -1f);
 
 			rMsg.r = new Vector3(
 				float.Parse(msg.rx, CultureInfo.InvariantCulture.NumberFormat),
