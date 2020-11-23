@@ -29,11 +29,11 @@ public class TCPtrans {
 	public bool reset;
 }
 
-public class TCP_Server : MonoBehaviour {  	
-	#region private members 
-	private TcpListener tcpListener; 
+public class TCP_Server : MonoBehaviour {
+	#region private members
+	private TcpListener tcpListener;
 	private Thread tcpListenerThread;
-	private TcpClient connectedTcpClient; 	
+	private TcpClient connectedTcpClient;
 	#endregion
 	public string msg;
 	public string buffer;
@@ -43,6 +43,7 @@ public class TCP_Server : MonoBehaviour {
 	
 	public Transform center;
 	public Boolean projection;
+	public Boolean pov;
 
 	public Transform _pa;
 	public Transform _pb;
@@ -79,8 +80,10 @@ public class TCP_Server : MonoBehaviour {
 		if (msg != null && msg != "" && trans != null) {
 			transform.position = trans.t;
 			//transform.rotation = Quaternion.Euler(trans.r);
-			transform.rotation = Quaternion.LookRotation(-(trans.t) - center.position, Vector3.up);
-			//center.rotation = Quaternion.Euler(trans.r*-1);
+			//transform.rotation = Quaternion.LookRotation(-(trans.t) - center.position, Vector3.up);
+			if (pov) {
+				center.rotation = Quaternion.Euler(trans.r*-1);
+			}
 		}
 
 		if (projection) {
@@ -111,7 +114,7 @@ public class TCP_Server : MonoBehaviour {
  
         float n = -lookTarget.InverseTransformPoint( theCam.transform.position ).z; // distance to the near clip plane (screen)
         float f = theCam.farClipPlane; // distance of far clipping plane
-        float d = 1f; // distance from eye to screen
+        float d = 0.3f; // distance from eye to screen
 
         float l = Vector3.Dot( vr, va ) * n / d; // distance to left screen edge from the 'center'
         float r = Vector3.Dot( vr, vb ) * n / d; // distance to right screen edge from 'center'
@@ -150,7 +153,7 @@ public class TCP_Server : MonoBehaviour {
  
         float n = -lookTarget.InverseTransformPoint( theCam.transform.position ).z; // distance to the near clip plane (screen)
         float f = theCam.farClipPlane; // distance of far clipping plane
-        float d = 1f; // distance from eye to screen
+        float d = 0.3f; // distance from eye to screen
 
         float l = Vector3.Dot( vr, va ) * n / d; // distance to left screen edge from the 'center'
         float r = Vector3.Dot( vr, vb ) * n / d; // distance to right screen edge from 'center'
@@ -209,8 +212,8 @@ public class TCP_Server : MonoBehaviour {
 				}
 			} 		
 		} 		
-		catch (SocketException socketException) { 			
-			Debug.Log("SocketException " + socketException.ToString()); 		
+		catch (SocketException socketException) {
+			Debug.Log("SocketException " + socketException.ToString());
 		}
 	}
 
