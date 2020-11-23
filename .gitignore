@@ -59,4 +59,7 @@ sysinfo.txt
 crashlytics-build.properties
 
 # Custom
-Assets/KB3D/CommonTextures
+Assets/KB3D
+Assets/DreamForestTree
+Assets/Models
+Assets/_Barking_Dog
